@@ -1,0 +1,50 @@
+# 1. Название нашего пайплайна
+name: 🚀 Run Automation Tests
+
+# 2. Триггер: запускать пайплайн автоматически при каждом пуше (push) в ветку main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  automation-tests:
+    # Запускаем тесты на чистой виртуальной машине Linux Ubuntu
+    runs-on: ubuntu-latest
+
+    # 3. Настраиваем Docker-контейнер с Postgres параллельно с тестами
+    services:
+      postgres-db:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: delivery_admin
+          POSTGRES_PASSWORD: secret_pass
+          POSTGRES_DB: food_delivery_db
+        # Пробрасываем порт 5432, чтобы тесты из виртуалки достучались до базы
+        ports:
+          - 5432:5432
+        # Проверяем, что база успешно стартанула, прежде чем запускать код
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # Шаг 1: Скачиваем код нашего репозитория на виртуальную машину
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      # Шаг 2: Устанавливаем на виртуалку Java 17 версии
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Шаг 3: Магия CI/CD — запускаем билд и прогон тестов через Maven!
+      # Команда mvn clean test сама найдет все классы с аннотациями @Test и выполнит их
+      - name: 🧪 Run Unit and API tests via Maven
+        run: mvn clean test
