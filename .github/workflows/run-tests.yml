@@ -1,28 +1,49 @@
-steps:
-  # Шаг 1: Скачиваем код
-  - name: ⬇️ Checkout code
-    uses: actions/checkout@v4
+name: 🚀 Run Automation Tests
 
-  # Шаг 2: Устанавливаем Java 17
-  - name: ☕ Set up JDK 17
-    uses: actions/setup-java@v4
-    with:
-      java-version: '17'
-      distribution: 'temurin'
-      cache: maven
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-  # Шаг 3: Собираем проект в готовый JAR-архив
-  - name: 📦 Build package
-    run: mvn clean package -DskipTests
+jobs:
+  automation-tests:
+    runs-on: ubuntu-latest
 
-  # Шаг 4: Запускаем бэкенд на порту 8080 в фоновом режиме Linux (знак & в конце)
-  - name: 🚀 Start Spring Boot App in background
-    run: java -jar target/food-delivery-app-1.0-SNAPSHOT.jar &
+    services:
+      postgres-db:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: delivery_admin
+          POSTGRES_PASSWORD: secret_pass
+          POSTGRES_DB: food_delivery_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-  # Шаг 5: Даем серверу 5 секунд, чтобы он успел полностью проснуться и открыть порт 8080
-  - name: ⏳ Wait for server to start
-    run: sleep 5
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
 
-  # Шаг 6: Прогоняем Unit и API автотесты (исключая UI)
-  - name: 🧪 Run Unit and API tests via Maven
-    run: mvn test -Dtest=!AuthUiTest
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 📦 Build package
+        run: mvn clean package -DskipTests
+
+      - name: 🚀 Start Spring Boot App in background
+        run: java -jar target/food-delivery-app-1.0-SNAPSHOT.jar &
+
+      - name: ⏳ Wait for server to start
+        run: sleep 5
+
+      - name: 🧪 Run Unit and API tests via Maven
+        run: mvn test -Dtest=!AuthUiTest
