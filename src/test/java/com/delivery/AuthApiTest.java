@@ -44,23 +44,32 @@ public class AuthApiTest {
     }
     @Test
     public void testSuccessfulLoginAndGetToken() {
-        // 1. GIVEN: Берем существующего пользователя, который точно есть в БД (мы заливали его через скрипт)
+        String uniqueUser = "login_test_user";
+
+        // Сначала ЖЕСТКО РЕГИСТРИРУЕМ этого пользователя в базе GitHub, чтобы он там точно был
+        Map<String, String> regBody = new HashMap<>();
+        regBody.put("username", uniqueUser);
+        regBody.put("password", "pass123");
+
+        // Отправляем скрытый запрос на регистрацию (игнорируем, если он уже создан)
+        given().contentType(ContentType.JSON).body(regBody).post("/api/auth/register");
+
+        // ТЕПЕРЬ СПОКОЙНО ЛОГИНИМСЯ — теперь этот пользователь гарантированно есть в Postgres!
         Map<String, String> loginBody = new HashMap<>();
-        loginBody.put("username", "ivan_client");
+        loginBody.put("username", uniqueUser);
         loginBody.put("password", "pass123");
 
-        // 2. WHEN & THEN: Отправляем запрос и проверяем ответ
         String responseBody = given()
                 .contentType(ContentType.JSON)
                 .body(loginBody)
                 .when()
                 .post("/api/auth/login")
                 .then()
-                .statusCode(200) // Проверяем, что код 200 OK
-                .body(containsString("Успешный вход")) // Проверяем текст
-                .extract().asString(); // ВЫТАСКИВАЕМ весь текст ответа, чтобы прочитать токен!
+                .statusCode(200)
+                .body(containsString("Успешный вход"))
+                .extract().asString();
 
-        // Печатаем токен в консоль тестов, чтобы убедиться, что мы его поймали
         System.out.println("🔥 Робот успешно поймал токен из ответа бэкенда:\n" + responseBody);
     }
+
 }
