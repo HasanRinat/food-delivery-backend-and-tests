@@ -47,4 +47,4 @@ jobs:
       # Шаг 3: Магия CI/CD — запускаем билд и прогон тестов через Maven!
       # Команда mvn clean test сама найдет все классы с аннотациями @Test и выполнит их
       - name: 🧪 Run Unit and API tests via Maven
-        run: mvn clean test -Dtest=*UnitTest,*ApiTest
+        run: mvn clean test -Dtest=!AuthUiTest
