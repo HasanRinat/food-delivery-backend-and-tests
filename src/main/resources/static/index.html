@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Яндекс.Самокат - Экспресс Доставка</title>
+    <style>
+        :root { --primary: #ffcc00; --primary-hover: #e6b800; --bg: #f9f9fa; --text: #212121; --gray: #757575; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 500px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; min-height: 90vh; }
+        .header { background: var(--primary); padding: 25px 20px; text-align: center; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; border-bottom: 2px solid #000; }
+        .content { padding: 20px; flex-grow: 1; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        input[type="text"], input[type="password"], input[type="number"] { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 12px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+        .btn-main { background: var(--text); color: white; }
+        .btn-sec { background: #f0f0f5; color: var(--text); }
+        .btn-order { background: var(--primary); color: var(--text); border: 2px solid #000; padding: 8px 15px; width: auto; font-size: 14px; }
+        .alert { padding: 12px 15px; border-radius: 12px; font-size: 14px; margin-top: 15px; display: none; font-weight: 600; }
+        .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        #shop-section { display: none; }
+        .menu-card { background: #fff; border: 2px solid #f0f0f5; border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .cart-box { background: #fffde7; border: 2px solid #fff59d; border-radius: 16px; padding: 15px; margin: 20px 0; }
+        .status-tracker { background: #f4f4f9; border-radius: 16px; padding: 15px; margin-top: 25px; border: 1px dashed #ccc; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 340px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .card-mock { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; border-radius: 12px; text-align: left; margin: 15px 0; font-family: monospace; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">⚡ САМОКАТ ДОСТАВКА</div>
+    <div class="content">
+        <!-- СЕКЦИЯ АВТОРИЗАЦИИ -->
+        <div id="auth-section">
+            <h3>Вход в личный кабинет</h3>
+            <div class="form-group"><label>Логин</label><input type="text" id="username" placeholder="ivan_client"></div>
+            <div class="form-group"><label>Пароль</label><input type="password" id="password" placeholder="pass123"></div>
+            <button id="btn-login" class="btn-main" onclick="handleLogin()">Войти</button>
+            <button class="btn-sec" onclick="handleRegister()">Создать аккаунт</button>
+            <div id="auth-alert" class="alert alert-error"></div>
+        </div>
+
+        <!-- СЕКЦИЯ МАГАЗИНА И КОРЗИНЫ -->
+        <div id="shop-section">
+            <h3>👋 Привет, <span id="user-display" style="color:#e65100;"></span>!</h3>
+            <h4>📋 Выберите блюда:</h4>
+            <div id="menu-container"></div>
+
+            <div class="cart-box">
+                <h4>🛒 Ваша корзина</h4>
+                <div id="cart-items" style="margin-bottom: 5px; font-weight: 600; color: #555;">Выбранные блюда: (пусто)</div>
+                <div style="font-size: 18px; font-weight: 800; margin-bottom: 15px; color: #d84315;">Итого за еду: <span id="food-total-price">0</span> ₽</div>
+                <div class="form-group"><label>Адрес доставки</label><input type="text" id="address" value="Уфа Ленина"></div>
+                <div class="form-group"><label>Телефон</label><input type="text" id="phone" value="+7 (937) 850-53-05"></div>
+                <div class="form-group"><label>Расстояние (км)</label><input type="number" id="distance" value="5" min="1" onchange="recalculateDelivery()"></div>
+                <div style="font-size: 15px; font-weight: 600; margin-bottom: 15px; color: #424242;">🚚 Доставка (+50₽/км): <span id="delivery-price">250</span> ₽</div>
+                <div style="font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #000;">Сумма к оплате: <span id="final-total-price">250</span> ₽</div>
+                <button id="btn-checkout" class="btn-main" style="background:#ff9800;" onclick="openPaymentModal()">💳 Оформить и оплатить заказ</button>>💳 Оформить и оплатить заказ</button>
+            </div>
+
+            <div class="status-tracker">
+                <h4>📦 Отслеживание заказа</h4>
+                <div id="status-result" style="font-weight:bold; color:#01579b;">Активных заказов нет</div>
+                <button id="btn-accept" class="btn-main" style="display:none; background:#4CAF50; margin-top:10px;" onclick="handleAccept()">✅ Подтвердить получение</button>
+                <button class="btn-sec" style="margin-top:10px; padding:8px; font-size:13px;" onclick="checkOrderStatus()">🔄 Обновить статус вручную</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО БАНКА -->
+<div id="payment-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">Secure Payment</h3>
+        <p>Списание средств в пользу Самокат Доставка</p>
+        <div style="font-size: 24px; font-weight: 800; margin-bottom: 10px;"><span id="modal-amount">0</span> ₽</div>
+        <div class="card-mock">
+            <div>CARD NUMBER</div><div style="font-size:18px; margin: 5px 0;">•••• •••• •••• 4242</div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;"><div>VALID THRU<br>12/29</div><div>CVV<br>•••</div></div>
+        </div>
+        <button id="btn-confirm-pay" class="btn-main" style="background:#4CAF50; margin-bottom:0;" onclick="processPayment()">Подтвердить оплату</button>
+        <button class="btn-sec" style="margin-top:10px; font-size:14px;" onclick="closePaymentModal()">Отмена</button>
+    </div>
+</div>
+<script>
+    let currentUsername = ''; let selectedDishes = []; let foodTotal = 0; let menuData = [];
+
+    async function handleRegister() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        const text = await response.text(); alert(text);
+    }
+
+    async function handleLogin() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        const text = await response.text();
+        if (text.includes('✅')) {
+            currentUsername = username; document.getElementById('user-display').innerText = username;
+            document.getElementById('auth-section').style.display = 'none'; document.getElementById('shop-section').style.display = 'block';
+            loadMenu();
+        } else {
+            const box = document.getElementById('auth-alert'); box.innerText = text; box.style.display = 'block';
+        }
+    }
+
+    async function loadMenu() {
+        const response = await fetch('/api/menu'); menuData = await response.json();
+        const container = document.getElementById('menu-container'); container.innerHTML = '';
+        menuData.forEach(dish => {
+            container.innerHTML += `
+                <div class="menu-card">
+                    <div><strong>${dish.name}</strong><br><small style="color:var(--gray);">${dish.weight} г.</small></div>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <span style="font-weight:800;">${dish.price} ₽</span>
+                        <button class="btn-order" onclick="addToCart('${dish.name}')">🛒 Выбрать</button>
+                    </div>
+                </div>`;
+        });
+        recalculateDelivery();
+    }
+
+    function addToCart(dishName) {
+        selectedDishes.push(dishName);
+        document.getElementById('cart-items').innerText = "Выбранные блюда: " + selectedDishes.join(", ");
+        const dish = menuData.find(d => d.name === dishName);
+        if (dish) { foodTotal += dish.price; document.getElementById('food-total-price').innerText = foodTotal; updateFinalSum(); }
+    }
+
+    function recalculateDelivery() {
+        const distance = parseInt(document.getElementById('distance').value) || 0;
+        const deliveryPrice = distance * 50; document.getElementById('delivery-price').innerText = deliveryPrice;
+        updateFinalSum();
+    }
+
+    function updateFinalSum() {
+        const deliveryPrice = parseInt(document.getElementById('delivery-price').innerText) || 0;
+        document.getElementById('final-total-price').innerText = foodTotal + deliveryPrice;
+    }
+
+    function openPaymentModal() {
+        if (selectedDishes.length === 0) { alert("Добавьте блюда в корзину!"); return; }
+        const distance = parseInt(document.getElementById('distance').value) || 0;
+        if (distance > 15) { alert("❌ К сожалению, доставка дальше 15 км невозможна!"); return; }
+        document.getElementById('modal-amount').innerText = document.getElementById('final-total-price').innerText;
+        document.getElementById('payment-modal').style.display = 'flex';
+    }
+
+    function closePaymentModal() { document.getElementById('payment-modal').style.display = 'none'; }
+
+    async function processPayment() {
+        document.getElementById('btn-confirm-pay').innerText = "⏳ Оплата...";
+        const address = document.getElementById('address').value; const phone = document.getElementById('phone').value; const distance = document.getElementById('distance').value;
+        const params = new URLSearchParams();
+        params.append('username', currentUsername); selectedDishes.forEach(name => params.append('dishNames', name));
+        params.append('address', address); params.append('phone', phone); params.append('distance', distance);
+
+        const response = await fetch('/api/orders/checkout', { method: 'POST', body: params });
+        const text = await response.text();
+        setTimeout(() => {
+            closePaymentModal(); document.getElementById('status-result').innerText = text;
+            document.getElementById('btn-confirm-pay').innerText = "Подтвердить оплату";
+            selectedDishes = []; foodTotal = 0; document.getElementById('cart-items').innerText = "Выбранные блюда: (пусто)";
+            document.getElementById('food-total-price').innerText = "0"; recalculateDelivery();
+            if(window.statusInterval) clearInterval(window.statusInterval);
+            window.statusInterval = setInterval(checkOrderStatus, 3000);
+        }, 1500);
+    }
+
+    async function checkOrderStatus() {
+        if (!currentUsername) return;
+        const response = await fetch(`/api/orders/status?username=${currentUsername}`);
+        const text = await response.text(); document.getElementById('status-result').innerText = text;
+        if (text.includes("WAITING_CONFIRMATION") || text.includes("у двери")) {
+            document.getElementById('btn-accept').style.display = 'block';
+        } else { document.getElementById('btn-accept').style.display = 'none'; }
+    }
+
+    async function handleAccept() {
+        const response = await fetch(`/api/orders/accept?username=${currentUsername}`, { method: 'POST' });
+        const text = await response.text(); document.getElementById('status-result').innerText = text;
+        document.getElementById('btn-accept').style.display = 'none';
+        if(window.statusInterval) clearInterval(window.statusInterval);
+    }
+</script>
+</body>
+</html>
