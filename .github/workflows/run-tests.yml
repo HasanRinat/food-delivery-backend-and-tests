@@ -1,50 +1,28 @@
-# 1. Название нашего пайплайна
-name: 🚀 Run Automation Tests
+steps:
+  # Шаг 1: Скачиваем код
+  - name: ⬇️ Checkout code
+    uses: actions/checkout@v4
 
-# 2. Триггер: запускать пайплайн автоматически при каждом пуше (push) в ветку main
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # Шаг 2: Устанавливаем Java 17
+  - name: ☕ Set up JDK 17
+    uses: actions/setup-java@v4
+    with:
+      java-version: '17'
+      distribution: 'temurin'
+      cache: maven
 
-jobs:
-  automation-tests:
-    # Запускаем тесты на чистой виртуальной машине Linux Ubuntu
-    runs-on: ubuntu-latest
+  # Шаг 3: Собираем проект в готовый JAR-архив
+  - name: 📦 Build package
+    run: mvn clean package -DskipTests
 
-    # 3. Настраиваем Docker-контейнер с Postgres параллельно с тестами
-    services:
-      postgres-db:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: delivery_admin
-          POSTGRES_PASSWORD: secret_pass
-          POSTGRES_DB: food_delivery_db
-        # Пробрасываем порт 5432, чтобы тесты из виртуалки достучались до базы
-        ports:
-          - 5432:5432
-        # Проверяем, что база успешно стартанула, прежде чем запускать код
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+  # Шаг 4: Запускаем бэкенд на порту 8080 в фоновом режиме Linux (знак & в конце)
+  - name: 🚀 Start Spring Boot App in background
+    run: java -jar target/food-delivery-app-1.0-SNAPSHOT.jar &
 
-    steps:
-      # Шаг 1: Скачиваем код нашего репозитория на виртуальную машину
-      - name: ⬇️ Checkout code
-        uses: actions/checkout@v4
+  # Шаг 5: Даем серверу 5 секунд, чтобы он успел полностью проснуться и открыть порт 8080
+  - name: ⏳ Wait for server to start
+    run: sleep 5
 
-      # Шаг 2: Устанавливаем на виртуалку Java 17 версии
-      - name: ☕ Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-
-      # Шаг 3: Магия CI/CD — запускаем билд и прогон тестов через Maven!
-      # Команда mvn clean test сама найдет все классы с аннотациями @Test и выполнит их
-      - name: 🧪 Run Unit and API tests via Maven
-        run: mvn spring-boot:start test -Dtest=!AuthUiTest
+  # Шаг 6: Прогоняем Unit и API автотесты (исключая UI)
+  - name: 🧪 Run Unit and API tests via Maven
+    run: mvn test -Dtest=!AuthUiTest
